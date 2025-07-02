@@ -6,33 +6,75 @@
 		<RootNamespace>WalkieTalkieApp</RootNamespace>
 		<AssemblyName>WalkieTalkieApp</AssemblyName>
 		<Platforms>AnyCPU;x64</Platforms>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
 
 		<PublishSingleFile>true</PublishSingleFile>
 		<SelfContained>true</SelfContained>
 		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
 		<PublishTrimmed>false</PublishTrimmed>
+		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
 
 		<Version>1.0.0</Version>
 		<Company>TuEmpresa</Company>
 		<Product>Walkie Talkie Empresarial</Product>
 		<Copyright>Copyright © 2023</Copyright>
+
+		<DebugType>portable</DebugType>
+		<DebugSymbols>true</DebugSymbols>
+		<Optimize>true</Optimize>
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
 	</PropertyGroup>
+	<ItemGroup>
+	  <Compile Remove="resourses\**" />
+	  <EmbeddedResource Remove="resourses\**" />
+	  <None Remove="resourses\**" />
+	</ItemGroup>
 
 	<ItemGroup>
-		<!-- Paquetes necesarios para configuración -->
+		<!-- Paquetes esenciales -->
+		<PackageReference Include="NAudio" Version="2.2.1" />
 		<PackageReference Include="Microsoft.Extensions.Configuration" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="7.0.0" />
 
-		<PackageReference Include="NAudio" Version="2.2.1" />
+		<!-- Dependencias del sistema -->
 		<PackageReference Include="System.Buffers" Version="4.6.1" />
 		<PackageReference Include="System.Memory" Version="4.6.3" />
 		<PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
+		<PackageReference Include="System.IO.Ports" Version="7.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Compile Update="MainForm.Designer.cs">
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>MainForm.resx</DependentUpon>
+	  </Compile>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Update="MainForm.resx">
+	    <Generator>PublicResXFileCodeGenerator</Generator>
+	    <LastGenOutput>MainForm.Designer.cs</LastGenOutput>
+	  </EmbeddedResource>
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Archivos de contenido -->
 		<None Update="appsettings.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
+		<None Update="resources\VW_Talk_Logo.ico">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="sounds\receive.wav">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="sounds\end_tx.wav">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
+
+	
 </Project>

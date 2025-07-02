@@ -10,7 +10,15 @@ namespace WalkieTalkieApp
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new MainForm());
+
+            // Mostrar formulario de inicio
+            using (LoginForm login = new LoginForm())
+            {
+                if (login.ShowDialog() == DialogResult.OK)
+                {
+                    Application.Run(new MainForm(login.UserName));
+                }
+            }
         }
     }
 }
