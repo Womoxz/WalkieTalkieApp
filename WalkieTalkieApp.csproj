@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net6.0-windows</TargetFramework>
+		<TargetFramework>net9.0-windows</TargetFramework>
 		<UseWindowsForms>true</UseWindowsForms>
 		<RootNamespace>WalkieTalkieApp</RootNamespace>
 		<AssemblyName>WalkieTalkieApp</AssemblyName>
@@ -24,11 +24,17 @@
 		<DebugSymbols>true</DebugSymbols>
 		<Optimize>true</Optimize>
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<ApplicationIcon>resources\VW_Talk_Logo.ico</ApplicationIcon>
 	</PropertyGroup>
 	<ItemGroup>
 	  <Compile Remove="resourses\**" />
 	  <EmbeddedResource Remove="resourses\**" />
 	  <None Remove="resourses\**" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Content Include="resources\VW_Talk_Logo.ico">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Content>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -65,14 +71,32 @@
 		<None Update="appsettings.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
+		<None Update="resources\bodega.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="resources\daniel.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="resources\jennifer.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="resources\jose.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="resources\leidy.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="resources\VW_Talk_Logo.ico">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="sounds\f7.wav">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="sounds\receive.wav">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="sounds\end_tx.wav">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
 
