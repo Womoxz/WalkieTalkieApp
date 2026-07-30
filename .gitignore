@@ -361,3 +361,8 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# Copia de los archivos originales antes de la reescritura (el historial de git ya los conserva)
+_backup_original/
+
+# Instalador generado: se crea con installer/WalkieTalkie.iss y pesa ~36 MB
+installer/dist/
