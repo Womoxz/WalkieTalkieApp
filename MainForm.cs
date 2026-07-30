@@ -42,6 +42,11 @@ namespace WalkieTalkieApp
         private string selectedContact = string.Empty;
         private bool actualizandoSeleccion;
         private bool pttFromMouse;
+        private bool pttFromPopup;
+
+        // Avisos de "te están hablando" con botón para responder.
+        private readonly List<ReplyPopup> popups = new();
+        private ReplyPopup? popupActivo;
         private bool pttFromKey;
         private bool exitRequested;
         private bool trayHintShown;
@@ -639,7 +644,7 @@ namespace WalkieTalkieApp
         {
             UiInvoke(() =>
             {
-                if (pttFromKey || pttFromMouse) return;
+                if (pttFromKey || pttFromMouse || pttFromPopup) return;
                 pttFromKey = true;
                 if (!StartTalking()) pttFromKey = false;
             });
@@ -652,7 +657,27 @@ namespace WalkieTalkieApp
                 if (!pttFromKey) return;
                 pttFromKey = false;
                 engine.StopTransmit();
+
+                // Devolver el aviso a su aspecto normal si se respondió con la tecla.
+                popupActivo?.MarcarRespondiendo(false);
             });
+        }
+
+        /// <summary>
+        /// Aviso al que contestaría la tecla de hablar: el del último que habló,
+        /// mientras siga en pantalla. Es lo que antes hacía la preselección
+        /// automática del contacto, pero sin cambiar la lista.
+        /// </summary>
+        private ReplyPopup? PopupParaResponder()
+        {
+            if (!config.General.VentanaDeRespuesta) return null;
+            if (!config.General.TeclaRespondeAlUltimo) return null;
+
+            var popup = popupActivo ?? popups.LastOrDefault();
+            if (popup == null || popup.IsDisposed) return null;
+
+            // Solo si ese contacto sigue estando disponible.
+            return config.Contactos.ContainsKey(popup.Contact) ? popup : null;
         }
 
         private void btnRecord_MouseDown(object? sender, MouseEventArgs e)
@@ -673,6 +698,23 @@ namespace WalkieTalkieApp
 
         private bool StartTalking()
         {
+            // Si alguien acaba de hablarte y su aviso sigue en pantalla, la tecla
+            // le contesta a esa persona; si no, va a los contactos seleccionados.
+            var popup = PopupParaResponder();
+            if (popup != null)
+            {
+                if (!engine.StartTransmit(popup.Contact))
+                {
+                    lblStatus.Text = engine.MicrophoneReady
+                        ? "No se pudo iniciar la transmisión."
+                        : $"Micrófono no disponible: {engine.MicrophoneError}";
+                    return false;
+                }
+
+                popup.MarcarRespondiendo(true);
+                return true;
+            }
+
             var destinos = Destinatarios();
 
             if (destinos.Count == 0)
@@ -740,10 +782,13 @@ namespace WalkieTalkieApp
 
             lblStatus.Text = $"Recibiendo de {contact}...";
 
+            // Aviso con botón para contestar directamente a quien habla.
+            MostrarPopup(contact)?.MarcarHablando();
+
             if (!IsForeground())
             {
                 FlashTaskbar();
-                if (config.General.MinimizarABandeja && !Visible)
+                if (config.General.MinimizarABandeja && !Visible && !config.General.VentanaDeRespuesta)
                 {
                     trayIcon.ShowBalloonTip(2500, "Walkie Talkie",
                         $"{contact} te está hablando", ToolTipIcon.Info);
@@ -761,9 +806,129 @@ namespace WalkieTalkieApp
             }
 
             // Antes se cambiaba solo el contacto seleccionado al recibir audio: si
-            // estabas grabando, tu mensaje se iba a otra persona.
+            // estabas grabando, tu mensaje se iba a otra persona. Ahora se ofrece
+            // responder desde el aviso, sin tocar la selección.
             if (e.Item != null) AddToHistory(e.Item);
+
+            var popup = popups.FirstOrDefault(p =>
+                p.Contact.Equals(e.Contact, StringComparison.OrdinalIgnoreCase));
+            popup?.MarcarRecibido(e.Item);
+
             UpdateStatus();
+        }
+
+        // ------------------------------------------------------------------
+        // Aviso para responder a quien acaba de hablar
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Muestra (o reutiliza) el aviso de un contacto. Se apilan hacia arriba
+        /// desde la esquina inferior derecha si hablan varias personas.
+        /// </summary>
+        private ReplyPopup? MostrarPopup(string contact)
+        {
+            if (!config.General.VentanaDeRespuesta) return null;
+
+            var existente = popups.FirstOrDefault(p =>
+                p.Contact.Equals(contact, StringComparison.OrdinalIgnoreCase));
+
+            if (existente != null)
+            {
+                popupActivo = existente;
+                return existente;
+            }
+
+            var popup = new ReplyPopup(contact, config.General.SegundosVentanaRespuesta);
+
+            popup.ReplyPressed += (s, e) => ResponderDesdePopup(popup, true);
+            popup.ReplyReleased += (s, e) => ResponderDesdePopup(popup, false);
+            popup.PlayRequested += (s, item) => ReproducirDesdePopup(item);
+            popup.Closed2 += (s, p) => QuitarPopup(p);
+
+            popups.Add(popup);
+            popupActivo = popup;
+            ReordenarPopups();
+
+            popup.Show();
+
+            if (config.General.TeclaRespondeAlUltimo)
+                popup.MostrarAtajo(config.General.TeclaPTT);
+
+            return popup;
+        }
+
+        private void QuitarPopup(ReplyPopup popup)
+        {
+            popups.Remove(popup);
+            if (popupActivo == popup) popupActivo = popups.LastOrDefault();
+            ReordenarPopups();
+        }
+
+        private void ReordenarPopups()
+        {
+            for (int i = 0; i < popups.Count; i++)
+            {
+                popups[i].Colocar(i);
+            }
+        }
+
+        private void CerrarPopups()
+        {
+            foreach (var p in popups.ToList())
+            {
+                try { p.Close(); } catch { }
+                p.Dispose();
+            }
+            popups.Clear();
+            popupActivo = null;
+        }
+
+        private void ResponderDesdePopup(ReplyPopup popup, bool pulsado)
+        {
+            if (pulsado)
+            {
+                if (pttFromKey || pttFromMouse || pttFromPopup) return;
+
+                pttFromPopup = true;
+                popupActivo = popup;
+
+                // Se contesta solo a esa persona, sin tocar la seleccion de la lista.
+                if (!engine.StartTransmit(popup.Contact))
+                {
+                    pttFromPopup = false;
+                    lblStatus.Text = engine.MicrophoneReady
+                        ? "No se pudo iniciar la transmisión."
+                        : $"Micrófono no disponible: {engine.MicrophoneError}";
+                    return;
+                }
+
+                popup.MarcarRespondiendo(true);
+            }
+            else
+            {
+                if (!pttFromPopup) return;
+                pttFromPopup = false;
+                engine.StopTransmit();
+                popup.MarcarRespondiendo(false);
+            }
+        }
+
+        private void ReproducirDesdePopup(AudioItem item)
+        {
+            if (engine.IsPlayingFile) engine.StopPlayback();
+
+            if (!File.Exists(item.FilePath))
+            {
+                lblStatus.Text = "El archivo de audio ya no existe.";
+                return;
+            }
+
+            if (engine.PlayFile(item.FilePath))
+            {
+                btnPlay.Text = "■";
+                btnPlay.ForeColor = Theme.Danger;
+                lblStatus.Text = $"Reproduciendo audio de {item.Contact}";
+            }
         }
 
         private void OnPresenceChanged(PresenceEventArgs e)
@@ -1125,6 +1290,7 @@ namespace WalkieTalkieApp
 
             airBlinkTimer.Stop();
             airBlinkTimer.Dispose();
+            CerrarPopups();
             hotKeyManager?.Dispose();
             discovery?.Dispose();
             engine?.Dispose();

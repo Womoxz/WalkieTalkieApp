@@ -2,7 +2,7 @@
 ; Compilar con:  "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\WalkieTalkie.iss
 
 #define AppName        "Walkie Talkie VW"
-#define AppVersion     "2.1.0"
+#define AppVersion     "2.2.0"
 #define AppPublisher   "TuEmpresa"
 #define AppExe         "WalkieTalkieApp.exe"
 #define SourceDir      "..\bin\Release\net9.0-windows\win-x64\publish"

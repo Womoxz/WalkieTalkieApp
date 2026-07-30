@@ -46,6 +46,8 @@ namespace WalkieTalkieApp
         private CheckBox chkBandeja = null!;
         private CheckBox chkSoloConocidos = null!;
         private CheckBox chkDescubrir = null!;
+        private CheckBox chkVentanaRespuesta = null!;
+        private CheckBox chkTeclaUltimo = null!;
         private CheckBox chkGuardarDescubiertos = null!;
         private NumericUpDown numPuertoDesc = null!;
         private NumericUpDown numPuerto = null!;
@@ -423,6 +425,19 @@ namespace WalkieTalkieApp
             chkSoloConocidos = Check("Aceptar audio solo de los contactos de la lista", 16, y);
             chkSoloConocidos.Size = new Size(470, 22);
             page.Controls.Add(chkSoloConocidos);
+            y += 30;
+
+            chkVentanaRespuesta = Check("Avisar con una ventana para responder cuando alguien te hable", 16, y);
+            chkVentanaRespuesta.Size = new Size(470, 22);
+            page.Controls.Add(chkVentanaRespuesta);
+            y += 26;
+
+            chkTeclaUltimo = Check("Con esa ventana abierta, la tecla responde a quien acaba de hablar", 36, y);
+            chkTeclaUltimo.Size = new Size(450, 22);
+            page.Controls.Add(chkTeclaUltimo);
+
+            chkVentanaRespuesta.CheckedChanged += (s, e) =>
+                chkTeclaUltimo.Enabled = chkVentanaRespuesta.Checked;
 
             return page;
         }
@@ -519,6 +534,9 @@ namespace WalkieTalkieApp
             chkSuprimir.Checked = config.General.SuprimirTeclaGlobal;
             chkBandeja.Checked = config.General.MinimizarABandeja;
             chkSoloConocidos.Checked = config.General.SoloContactosConocidos;
+            chkVentanaRespuesta.Checked = config.General.VentanaDeRespuesta;
+            chkTeclaUltimo.Checked = config.General.TeclaRespondeAlUltimo;
+            chkTeclaUltimo.Enabled = chkVentanaRespuesta.Checked;
             chkDescubrir.Checked = config.General.DescubrimientoAutomatico;
             chkGuardarDescubiertos.Checked = config.General.GuardarContactosDescubiertos;
             chkGuardarDescubiertos.Enabled = chkDescubrir.Checked;
@@ -551,6 +569,8 @@ namespace WalkieTalkieApp
             config.General.SuprimirTeclaGlobal = chkSuprimir.Checked;
             config.General.MinimizarABandeja = chkBandeja.Checked;
             config.General.SoloContactosConocidos = chkSoloConocidos.Checked;
+            config.General.VentanaDeRespuesta = chkVentanaRespuesta.Checked;
+            config.General.TeclaRespondeAlUltimo = chkTeclaUltimo.Checked;
             config.General.DescubrimientoAutomatico = chkDescubrir.Checked;
             config.General.GuardarContactosDescubiertos = chkGuardarDescubiertos.Checked;
             config.General.PuertoDescubrimiento = (int)numPuertoDesc.Value;

@@ -18,7 +18,7 @@
 		<PublishTrimmed>false</PublishTrimmed>
 		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
 
-		<Version>2.1.0</Version>
+		<Version>2.2.0</Version>
 		<Company>TuEmpresa</Company>
 		<Product>Walkie Talkie Empresarial</Product>
 		<Copyright>Copyright © 2026</Copyright>

@@ -1,4 +1,29 @@
-# Walkie Talkie 2.1 — notas de la revisión
+# Walkie Talkie 2.2 — notas de la revisión
+
+## Responder a quien acaba de hablar (2.2)
+
+Cuando alguien te habla aparece un aviso en la esquina inferior derecha con su
+avatar, su nombre y el estado (*"te está hablando…"* mientras habla, o *"te envió
+un audio de 4s"* al terminar). Desde ahí puedes:
+
+- **Mantener pulsado "RESPONDER"** para contestarle solo a esa persona.
+- **Pulsar ▶** para volver a escuchar lo que acaba de llegar.
+
+Si te hablan varios, los avisos se apilan, uno por persona. Cada uno se cierra
+solo a los 12 segundos (configurable), y nunca mientras estés respondiendo.
+
+**Sobre la preselección de antes:** la versión original cambiaba el contacto
+seleccionado en la lista al recibir audio. Era cómodo para responder, pero si te
+llegaba un mensaje **mientras estabas hablando**, te cambiaba el destinatario a
+media frase y tu audio acababa en otra persona. Ahora el efecto útil se conserva
+—**mientras el aviso está en pantalla, la tecla de hablar responde a quien acaba
+de hablar**, y el botón lo indica— pero la lista no se toca nunca.
+
+El aviso **no roba el foco del teclado**, así que si estás escribiendo en otro
+programa cuando alguien te habla, no te interrumpe.
+
+En ⚙ → General se puede desactivar la ventana, o dejarla pero que la tecla siga
+yendo siempre a los contactos seleccionados.
 
 ## Hablar con varios a la vez (2.1)
 
@@ -26,7 +51,7 @@ Ten en cuenta que enviar a N personas multiplica por N el tráfico de subida
 
 ## Instalador
 
-`installer\dist\WalkieTalkieVW_2.1.0_Setup.exe` (34,6 MB). Hecho con Inno Setup 6,
+`installer\dist\WalkieTalkieVW_2.2.0_Setup.exe` (34,6 MB). Hecho con Inno Setup 6,
 que ya estaba instalado en el equipo. El script es `installer\WalkieTalkie.iss`.
 
 Para regenerarlo tras cambiar código:
@@ -59,7 +84,7 @@ Requiere permisos de administrador para instalar (por el firewall y la carpeta).
 Se puede desplegar en silencio con:
 
 ```
-WalkieTalkieVW_2.1.0_Setup.exe /VERYSILENT /NORESTART
+WalkieTalkieVW_2.2.0_Setup.exe /VERYSILENT /NORESTART
 ```
 
 ## Descubrimiento automático de contactos

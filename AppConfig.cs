@@ -189,6 +189,21 @@ namespace WalkieTalkieApp
         /// <summary>Conserva en appsettings.json los contactos encontrados.</summary>
         public bool GuardarContactosDescubiertos { get; set; } = true;
 
+        /// <summary>
+        /// Muestra un aviso al recibir audio con un botón para contestar a esa
+        /// persona sin cambiar el contacto seleccionado en la lista.
+        /// </summary>
+        public bool VentanaDeRespuesta { get; set; } = true;
+
+        /// <summary>Segundos que permanece visible el aviso si no se toca.</summary>
+        public int SegundosVentanaRespuesta { get; set; } = 12;
+
+        /// <summary>
+        /// Mientras el aviso está en pantalla, la tecla de hablar contesta a quien
+        /// acaba de hablar en vez de al contacto seleccionado.
+        /// </summary>
+        public bool TeclaRespondeAlUltimo { get; set; } = true;
+
         [JsonIgnore]
         public Keys TeclaPTTKey
         {
