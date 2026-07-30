@@ -1,76 +1,98 @@
 using System;
 using System.Drawing;
-using System.IO;
 using System.Windows.Forms;
 
 namespace WalkieTalkieApp
 {
-    public partial class WelcomeForm : Form
+    /// <summary>
+    /// Pantalla de bienvenida. El archivo anterior estaba guardado en ANSI y el
+    /// saludo se veÃ­a literalmente como "ï¿½Hola de nuevo, Jose!".
+    /// </summary>
+    public class WelcomeForm : Form
     {
         public WelcomeForm(string user)
         {
-            // No llamar a InitializeComponent, todo es por código
-            this.Text = "Bienvenido";
-            this.FormBorderStyle = FormBorderStyle.FixedDialog;
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = Color.White;
-            this.Size = new Size(370, 180);
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
+            Text = "Bienvenido";
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            StartPosition = FormStartPosition.CenterScreen;
+            BackColor = Theme.Background;
+            ForeColor = Theme.Text;
+            Font = Theme.FontBase;
+            ClientSize = new Size(400, 210);
+            MaximizeBox = false;
+            MinimizeBox = false;
+            ShowInTaskbar = true;
 
-            // Panel para centrar contenido
-            var panel = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Color.White,
-                AutoScroll = false // Asegurarse de que el panel use el posicionamiento manual
-            };
-            this.Controls.Add(panel);
-
-            // PictureBox para la imagen del usuario
             var pic = new PictureBox
             {
                 Size = new Size(72, 72),
-                Location = new Point(30, 35),
+                Location = new Point(28, 34),
                 SizeMode = PictureBoxSizeMode.Zoom,
-                BackColor = Color.LightGray // Color para diferenciar si no hay imagen
+                Image = Theme.LoadAvatar(user, 72)
             };
 
-            string imgPath = $"resources\\{user.ToLower()}.png";
-            if (File.Exists(imgPath))
-                pic.Image = Image.FromFile(imgPath);
-            else
-                pic.Image = null;
-
-            // Label para el mensaje con tamaño ajustado
-            var lbl = new Label
+            // AutoSize + ventana elÃ¡stica: con el ancho fijo anterior, un nombre
+            // largo se cortaba y el saludo quedaba en "Â¡Hola de nuevo,".
+            var lblHola = new Label
             {
-                Text = $"¡Hola de nuevo, {user}!",
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                ForeColor = Color.FromArgb(45, 45, 48),
+                Text = $"Â¡Hola de nuevo, {user}!",
+                Font = Theme.FontTitle,
+                ForeColor = Theme.Text,
+                AutoSize = true,
+                Location = new Point(116, 44),
+                MaximumSize = new Size(520, 0)
+            };
+
+            var lblSub = new Label
+            {
+                Text = "Pulsa Continuar para conectarte.",
+                Font = Theme.FontSmall,
+                ForeColor = Theme.TextMuted,
                 AutoSize = false,
-                Size = new Size(210, 60),
-                TextAlign = ContentAlignment.MiddleLeft,
-                Location = new Point(120, 30) // Ubicación ajustada para mayor visibilidad
+                Location = new Point(118, 74),
+                Size = new Size(260, 20),
+                TextAlign = ContentAlignment.MiddleLeft
             };
 
-            // Botón aceptar, centrado horizontalmente
-            var btn = new Button
+            var btnOk = new Button
             {
-                Text = "Aceptar",
+                Text = "Continuar",
                 DialogResult = DialogResult.OK,
-                Size = new Size(100, 32),
-                BackColor = Color.FromArgb(0, 122, 204),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Location = new Point((this.ClientSize.Width - 100) / 2, 100)
+                Size = new Size(140, 36),
+                Location = new Point(212, 140)
             };
+            Theme.StyleButton(btnOk, Theme.Accent, Theme.AccentHover);
+            btnOk.Font = Theme.FontButton;
 
-            // Agregar controles al panel
-            panel.Controls.Add(pic);
-            panel.Controls.Add(lbl);
-            panel.Controls.Add(btn);
-            this.AcceptButton = btn;
+            // Antes no habÃ­a forma de cambiar de usuario sin borrar user.txt a mano.
+            var btnOther = new Button
+            {
+                Text = "No soy yo",
+                DialogResult = DialogResult.Cancel,
+                Size = new Size(140, 36),
+                Location = new Point(56, 140)
+            };
+            Theme.StyleSecondaryButton(btnOther);
+
+            Controls.AddRange(new Control[] { pic, lblHola, lblSub, btnOk, btnOther });
+
+            // Ensanchar la ventana si el saludo lo pide y recolocar los botones.
+            int anchoNecesario = lblHola.Right + 28;
+            if (anchoNecesario > ClientSize.Width)
+                ClientSize = new Size(anchoNecesario, ClientSize.Height);
+
+            btnOk.Location = new Point(ClientSize.Width - btnOk.Width - 28, 140);
+            btnOther.Location = new Point(btnOk.Left - btnOther.Width - 16, 140);
+
+            AcceptButton = btnOk;
+            CancelButton = btnOther;
+
+            try
+            {
+                string ico = System.IO.Path.Combine(AppPaths.ResourcesDir, "VW_Talk_Logo.ico");
+                if (System.IO.File.Exists(ico)) Icon = new Icon(ico);
+            }
+            catch { }
         }
     }
 }
