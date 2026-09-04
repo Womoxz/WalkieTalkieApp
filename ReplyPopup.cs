@@ -31,7 +31,12 @@ namespace WalkieTalkieApp
         private readonly System.Windows.Forms.Timer parpadeoTimer = new();
 
         private bool parpadeoOn;
-        private int segundosRestantes;
+
+        /// <summary>Ya se contestó: el aviso se cierra en cuanto pase el segundo.</summary>
+        public bool Respondido { get; private set; }
+
+        /// <summary>Este es el aviso al que contesta la tecla de hablar.</summary>
+        public bool EsElActivo { get; private set; }
 
         public string Contact { get; }
         public AudioItem? Item { get; private set; }
@@ -45,7 +50,6 @@ namespace WalkieTalkieApp
         public ReplyPopup(string contact, int segundosVisible)
         {
             Contact = contact;
-            segundosRestantes = Math.Max(4, segundosVisible);
 
             FormBorderStyle = FormBorderStyle.None;
             ShowInTaskbar = false;
@@ -57,13 +61,15 @@ namespace WalkieTalkieApp
 
             ConstruirUi(contact);
 
+            // El aviso NO se cierra solo: permanece hasta que se conteste o se
+            // pulse la X, aunque se haga clic en otras ventanas. Este
+            // temporizador solo lo retira un segundo después de responder.
             cierreTimer.Interval = 1000;
             cierreTimer.Tick += (s, e) =>
             {
-                segundosRestantes--;
-                if (segundosRestantes <= 0) CerrarSuave();
+                cierreTimer.Stop();
+                CerrarSuave();
             };
-            cierreTimer.Start();
 
             parpadeoTimer.Interval = 500;
             parpadeoTimer.Tick += (s, e) =>
@@ -117,15 +123,12 @@ namespace WalkieTalkieApp
             btnResponder.MouseDown += (s, e) =>
             {
                 if (e.Button != MouseButtons.Left) return;
-                // Mientras se responde, el aviso no debe desaparecer.
-                cierreTimer.Stop();
                 ReplyPressed?.Invoke(this, EventArgs.Empty);
             };
             btnResponder.MouseUp += (s, e) =>
             {
                 if (e.Button != MouseButtons.Left) return;
                 ReplyReleased?.Invoke(this, EventArgs.Empty);
-                ReiniciarCuentaAtras();
             };
 
             btnPlay.Location = new Point(Ancho - 76, 70);
@@ -136,11 +139,7 @@ namespace WalkieTalkieApp
             Theme.StyleSecondaryButton(btnPlay);
             btnPlay.Click += (s, e) =>
             {
-                if (Item != null)
-                {
-                    ReiniciarCuentaAtras();
-                    PlayRequested?.Invoke(this, Item);
-                }
+                if (Item != null) PlayRequested?.Invoke(this, Item);
             };
 
             Controls.AddRange(new Control[]
@@ -156,7 +155,6 @@ namespace WalkieTalkieApp
             btnPlay.Enabled = false;
             lblEstado.Text = "te está hablando...";
             parpadeoTimer.Start();
-            ReiniciarCuentaAtras();
         }
 
         public void MarcarRecibido(AudioItem? item)
@@ -177,8 +175,6 @@ namespace WalkieTalkieApp
             {
                 lblEstado.Text = "te ha hablado";
             }
-
-            ReiniciarCuentaAtras();
         }
 
         public void MarcarRespondiendo(bool activo)
@@ -195,20 +191,54 @@ namespace WalkieTalkieApp
                 btnResponder.Text = "MANTENER PARA RESPONDER";
                 btnResponder.BackColor = Theme.Accent;
                 btnResponder.FlatAppearance.MouseOverBackColor = Theme.AccentHover;
-                ReiniciarCuentaAtras();
             }
         }
 
-        /// <summary>Indica que la tecla de hablar contestará a este contacto.</summary>
-        public void MostrarAtajo(string tecla)
+        /// <summary>
+        /// Se ha contestado: el aviso se retira solo un segundo después, para
+        /// que dé tiempo a ver que el mensaje salió.
+        /// </summary>
+        public void MarcarRespondido()
         {
-            btnResponder.Text = $"MANTENER PARA RESPONDER  ·  {tecla}";
+            if (Respondido) return;
+            Respondido = true;
+
+            parpadeoTimer.Stop();
+            btnResponder.Enabled = false;
+            btnResponder.Text = "RESPUESTA ENVIADA";
+            btnResponder.BackColor = Theme.Online;
+            lblEstado.ForeColor = Theme.Online;
+            lblEstado.Text = "respondido";
+
+            cierreTimer.Start();   // se cierra en 1 segundo
         }
 
-        private void ReiniciarCuentaAtras()
+        /// <summary>
+        /// Marca si es el aviso al que responde la tecla de hablar. Los demás
+        /// quedan en espera hasta que este se conteste.
+        /// </summary>
+        public void MarcarActivo(bool activo, string tecla)
         {
-            segundosRestantes = Math.Max(segundosRestantes, 8);
-            cierreTimer.Start();
+            EsElActivo = activo;
+
+            if (Respondido) return;
+
+            if (activo)
+            {
+                BackColor = Theme.Surface;
+                btnResponder.Enabled = true;
+                btnResponder.BackColor = Theme.Accent;
+                btnResponder.Text = $"MANTENER PARA RESPONDER  ·  {tecla}";
+            }
+            else
+            {
+                // En espera: se ve que existe, pero no responde a la tecla.
+                BackColor = Theme.Background;
+                btnResponder.Enabled = false;
+                btnResponder.BackColor = Theme.SurfaceAlt;
+                btnResponder.Text = "EN ESPERA";
+            }
+            Invalidate();
         }
 
         private void CerrarSuave()

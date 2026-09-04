@@ -1,4 +1,37 @@
-# Walkie Talkie 2.3 — notas de la revisión
+# Walkie Talkie 2.4 — notas de la revisión
+
+## Correcciones de la 2.4
+
+**En Configuración → Contactos no se veía parte del recuadro.** La ventana medía
+520x470 y los dos últimos ajustes con su texto de ayuda caían fuera de la zona
+visible. Ahora mide 540x560 y todo entra, con la lista y las columnas algo más
+anchas.
+
+**Al abrir la aplicación los contactos se quedaban en gris.** Este era el fallo
+de fondo: los avisos de "está conectado" que llegan durante el arranque se
+descartaban porque la ventana **todavía no existe**, y como el estado interno ya
+había quedado marcado, no se volvían a emitir. Los contactos seguían grises hasta
+entrar en Configuración y dar a Guardar, que era lo único que releía el estado
+real. Ahora:
+
+- Al mostrarse la ventana se vuelca el estado real del descubrimiento.
+- Un repaso cada 2 segundos recupera cualquier aviso perdido.
+- Al arrancar se lanza una **ráfaga de búsqueda** (a los 0,25 · 0,7 · 1,5 y 3
+  segundos) en vez de esperar al ciclo normal de 4: la lista se pinta en verde
+  casi al instante y ya no hace falta entrar en Configuración para refrescarla.
+
+**La ventana de respuesta rápida ahora manda sobre la principal.** Tal y como se
+pidió:
+
+- Mientras haya un aviso sin contestar, **la tecla de hablar es suya**: el botón
+  principal se queda en pausa y muestra *"F7 RESPONDE A DANIEL"*.
+- Si llegan varios mensajes, se contestan **por orden de llegada**. El primero
+  aparece activo con su botón azul y los demás en gris, **EN ESPERA**, hasta que
+  les toque.
+- **El aviso ya no se cierra solo.** Da igual que hagas clic en otra ventana:
+  permanece hasta que lo contestes o pulses la X.
+- Al responder queda marcado como *respuesta enviada* y **se retira un segundo
+  después**, dejando el turno al siguiente de la cola.
 
 ## Actualizaciones automáticas (2.3)
 
@@ -97,7 +130,7 @@ Ten en cuenta que enviar a N personas multiplica por N el tráfico de subida
 
 ## Instalador
 
-`installer\dist\WalkieTalkieVW_2.3.0_Setup.exe` (34,6 MB). Hecho con Inno Setup 6,
+`installer\dist\WalkieTalkieVW_2.4.0_Setup.exe` (34,6 MB). Hecho con Inno Setup 6,
 que ya estaba instalado en el equipo. El script es `installer\WalkieTalkie.iss`.
 
 Para regenerarlo tras cambiar código:
@@ -130,7 +163,7 @@ Requiere permisos de administrador para instalar (por el firewall y la carpeta).
 Se puede desplegar en silencio con:
 
 ```
-WalkieTalkieVW_2.3.0_Setup.exe /VERYSILENT /NORESTART
+WalkieTalkieVW_2.4.0_Setup.exe /VERYSILENT /NORESTART
 ```
 
 ## Descubrimiento automático de contactos

@@ -52,6 +52,7 @@ namespace WalkieTalkieApp
         private System.Threading.Timer? announceTimer;
         private System.Threading.Timer? presenceTimer;
         private System.Threading.Timer? saveTimer;
+        private readonly List<System.Threading.Timer> arranque = new();
         private volatile bool running;
 
         private readonly ConcurrentDictionary<string, DateTime> lastSeen =
@@ -97,6 +98,17 @@ namespace WalkieTalkieApp
 
                 announceTimer = new System.Threading.Timer(
                     _ => Announce(MsgDiscover), null, 0, AnnounceIntervalMs);
+
+                // Ráfaga de arranque: varios avisos seguidos en los primeros
+                // segundos. UDP pierde paquetes y los demás equipos pueden estar
+                // arrancando a la vez; así la lista se pinta en verde enseguida
+                // en vez de esperar al siguiente ciclo de 4 segundos.
+                foreach (int ms in new[] { 250, 700, 1500, 3000 })
+                {
+                    var t = new System.Threading.Timer(_ => Announce(MsgDiscover), null,
+                                                       ms, Timeout.Infinite);
+                    arranque.Add(t);
+                }
 
                 presenceTimer = new System.Threading.Timer(
                     _ => CheckPresence(), null, AnnounceIntervalMs, 2000);
@@ -290,6 +302,8 @@ namespace WalkieTalkieApp
 
             announceTimer?.Dispose();
             presenceTimer?.Dispose();
+            foreach (var t in arranque) t.Dispose();
+            arranque.Clear();
 
             FlushSave();
             saveTimer?.Dispose();

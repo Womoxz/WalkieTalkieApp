@@ -47,6 +47,8 @@ namespace WalkieTalkieApp
         // Avisos de "te están hablando" con botón para responder.
         private readonly List<ReplyPopup> popups = new();
         private ReplyPopup? popupActivo;
+        /// <summary>Aviso al que se está contestando ahora mismo.</summary>
+        private ReplyPopup? popupRespondiendo;
 
         // Actualizaciones automáticas.
         private UpdateService? updates;
@@ -58,6 +60,7 @@ namespace WalkieTalkieApp
         private int volumeBeforeMute = 100;
         private DateTime lastLevelUpdate = DateTime.MinValue;
         private readonly System.Windows.Forms.Timer airBlinkTimer;
+        private System.Windows.Forms.Timer? presenciaTimer;
         private bool airOn;
         private Label lblVacio = null!;
 
@@ -276,6 +279,13 @@ namespace WalkieTalkieApp
             discovery.ContactDiscovered += (s, e) => UiInvoke(() => OnContactDiscovered(e));
             discovery.PresenceChanged += (s, e) => UiInvoke(() => OnPresenceChanged(e));
             discovery.Start();
+
+            // Repaso periódico por si algún aviso se perdió (por ejemplo, los
+            // que llegan durante el arranque, antes de que exista la ventana).
+            presenciaTimer ??= new System.Windows.Forms.Timer { Interval = 2000 };
+            presenciaTimer.Tick -= PresenciaTimer_Tick;
+            presenciaTimer.Tick += PresenciaTimer_Tick;
+            presenciaTimer.Start();
         }
 
         /// <summary>
@@ -520,16 +530,32 @@ namespace WalkieTalkieApp
         private void UpdateRecordButtonEnabled()
         {
             int destinos = Destinatarios().Count;
-            bool ready = destinos > 0;
+
+            // Con un aviso sin contestar, la ventana principal queda en pausa:
+            // hablar responde a quien escribió, no al contacto seleccionado.
+            bool hayAvisoPendiente = PopupParaResponder() != null;
+            bool ready = destinos > 0 && !hayAvisoPendiente;
 
             btnRecord.Enabled = ready;
             btnRecord.BackColor = ready ? Theme.Accent : Theme.SurfaceAlt;
 
             if (!engine?.IsTransmitting ?? true)
             {
-                btnRecord.Text = destinos > 1
-                    ? $"MANTÉN PULSADO PARA HABLAR CON {destinos} CONTACTOS ({config.General.TeclaPTT})"
-                    : $"MANTÉN PULSADO PARA HABLAR ({config.General.TeclaPTT})";
+                var pendiente = PopupParaResponder();
+
+                if (pendiente != null)
+                {
+                    // Mientras haya un aviso sin contestar, la tecla es suya.
+                    btnRecord.Text =
+                        $"{config.General.TeclaPTT} RESPONDE A {pendiente.Contact.ToUpperInvariant()}";
+                    btnRecord.BackColor = Theme.SurfaceAlt;
+                }
+                else
+                {
+                    btnRecord.Text = destinos > 1
+                        ? $"MANTÉN PULSADO PARA HABLAR CON {destinos} CONTACTOS ({config.General.TeclaPTT})"
+                        : $"MANTÉN PULSADO PARA HABLAR ({config.General.TeclaPTT})";
+                }
             }
         }
 
@@ -664,8 +690,14 @@ namespace WalkieTalkieApp
                 pttFromKey = false;
                 engine.StopTransmit();
 
-                // Devolver el aviso a su aspecto normal si se respondió con la tecla.
-                popupActivo?.MarcarRespondiendo(false);
+                // Si se estaba contestando a un aviso, queda respondido: se
+                // retira en un segundo y el turno pasa al siguiente de la cola.
+                if (popupRespondiendo != null)
+                {
+                    popupRespondiendo.MarcarRespondido();
+                    popupRespondiendo = null;
+                    ActualizarPrioridadPopups();
+                }
             });
         }
 
@@ -679,8 +711,10 @@ namespace WalkieTalkieApp
             if (!config.General.VentanaDeRespuesta) return null;
             if (!config.General.TeclaRespondeAlUltimo) return null;
 
-            var popup = popupActivo ?? popups.LastOrDefault();
-            if (popup == null || popup.IsDisposed) return null;
+            // El más antiguo sin responder: si llegan dos mensajes, se contesta
+            // en el orden en que llegaron, uno a uno.
+            var popup = popups.FirstOrDefault(p => !p.Respondido && !p.IsDisposed);
+            if (popup == null) return null;
 
             // Solo si ese contacto sigue estando disponible.
             return config.Contactos.ContainsKey(popup.Contact) ? popup : null;
@@ -718,6 +752,7 @@ namespace WalkieTalkieApp
                 }
 
                 popup.MarcarRespondiendo(true);
+                popupRespondiendo = popup;
                 return true;
             }
 
@@ -836,13 +871,9 @@ namespace WalkieTalkieApp
             if (!config.General.VentanaDeRespuesta) return null;
 
             var existente = popups.FirstOrDefault(p =>
-                p.Contact.Equals(contact, StringComparison.OrdinalIgnoreCase));
+                p.Contact.Equals(contact, StringComparison.OrdinalIgnoreCase) && !p.Respondido);
 
-            if (existente != null)
-            {
-                popupActivo = existente;
-                return existente;
-            }
+            if (existente != null) return existente;
 
             var popup = new ReplyPopup(contact, config.General.SegundosVentanaRespuesta);
 
@@ -851,14 +882,12 @@ namespace WalkieTalkieApp
             popup.PlayRequested += (s, item) => ReproducirDesdePopup(item);
             popup.Closed2 += (s, p) => QuitarPopup(p);
 
+            // Cola por orden de llegada: el primero es al que contesta la tecla.
             popups.Add(popup);
-            popupActivo = popup;
             ReordenarPopups();
 
             popup.Show();
-
-            if (config.General.TeclaRespondeAlUltimo)
-                popup.MostrarAtajo(config.General.TeclaPTT);
+            ActualizarPrioridadPopups();
 
             return popup;
         }
@@ -866,8 +895,28 @@ namespace WalkieTalkieApp
         private void QuitarPopup(ReplyPopup popup)
         {
             popups.Remove(popup);
-            if (popupActivo == popup) popupActivo = popups.LastOrDefault();
+            if (popupActivo == popup) popupActivo = null;
             ReordenarPopups();
+            ActualizarPrioridadPopups();
+        }
+
+        /// <summary>
+        /// Deja activo solo el aviso más antiguo sin responder: es al que
+        /// contesta la tecla de hablar. Los demás quedan a la espera hasta que
+        /// ese se conteste o se cierre.
+        /// </summary>
+        private void ActualizarPrioridadPopups()
+        {
+            var primero = popups.FirstOrDefault(p => !p.Respondido && !p.IsDisposed);
+            popupActivo = primero;
+
+            foreach (var p in popups)
+            {
+                if (!p.IsDisposed) p.MarcarActivo(p == primero, config.General.TeclaPTT);
+            }
+
+            // El botón principal indica que la tecla está ocupada con el aviso.
+            UpdateRecordButtonEnabled();
         }
 
         private void ReordenarPopups()
@@ -915,7 +964,10 @@ namespace WalkieTalkieApp
                 if (!pttFromPopup) return;
                 pttFromPopup = false;
                 engine.StopTransmit();
-                popup.MarcarRespondiendo(false);
+
+                popup.MarcarRespondido();     // se cierra en 1 segundo
+                popupRespondiendo = null;
+                ActualizarPrioridadPopups();
             }
         }
 
@@ -934,6 +986,49 @@ namespace WalkieTalkieApp
                 btnPlay.Text = "■";
                 btnPlay.ForeColor = Theme.Danger;
                 lblStatus.Text = $"Reproduciendo audio de {item.Contact}";
+            }
+        }
+
+        /// <summary>
+        /// Vuelca en la lista el estado real que tiene el descubrimiento.
+        ///
+        /// Hace falta porque los avisos que llegan mientras la ventana aún no
+        /// existe se descartan (UiInvoke necesita un handle), y como el estado
+        /// interno ya quedó marcado, no se vuelven a emitir: los contactos se
+        /// quedaban en gris hasta entrar en Configuración y guardar.
+        /// </summary>
+        private void PresenciaTimer_Tick(object? sender, EventArgs e) => SincronizarPresencia();
+
+        private void SincronizarPresencia()
+        {
+            if (discovery == null || lstContactos.Items.Count == 0) return;
+
+            bool algunCambio = false;
+
+            foreach (ContactEntry entry in lstContactos.Items)
+            {
+                if (entry.EsTodos) continue;
+
+                bool enLinea = discovery.IsOnline(entry.Name);
+                if (entry.Online != enLinea)
+                {
+                    entry.Online = enLinea;
+                    algunCambio = true;
+                }
+            }
+
+            // Contactos descubiertos mientras la ventana no estaba lista.
+            int enLista = lstContactos.Items.Count - (lstContactos.Items.Cast<ContactEntry>().Any(c => c.EsTodos) ? 1 : 0);
+            if (enLista != config.ContactosExternos(userName).Count())
+            {
+                LoadContacts();
+                algunCambio = true;
+            }
+
+            if (algunCambio)
+            {
+                lstContactos.Invalidate();
+                UpdateStatus();
             }
         }
 
@@ -1150,6 +1245,10 @@ namespace WalkieTalkieApp
             // Sin esto el foco caía en el botón de configuración y un Enter
             // despistado abría el diálogo.
             if (lstContactos.Items.Count > 0) ActiveControl = lstContactos;
+
+            // La ventana ya tiene handle: se recupera lo que se haya descubierto
+            // durante el arranque.
+            SincronizarPresencia();
         }
 
         private void trayIcon_DoubleClick(object? sender, EventArgs e) => RestoreFromTray();
@@ -1299,6 +1398,8 @@ namespace WalkieTalkieApp
             airBlinkTimer.Dispose();
             updateTimer?.Stop();
             updateTimer?.Dispose();
+            presenciaTimer?.Stop();
+            presenciaTimer?.Dispose();
             CerrarPopups();
 
             // Si hay una versión descargada, se instala al salir: es el momento

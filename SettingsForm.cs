@@ -85,7 +85,7 @@ namespace WalkieTalkieApp
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
-            ClientSize = new Size(520, 470);
+            ClientSize = new Size(540, 560);
             BackColor = Theme.Background;
             ForeColor = Theme.Text;
             Font = Theme.FontBase;
@@ -200,16 +200,16 @@ namespace WalkieTalkieApp
                 ForeColor = Theme.Text,
                 BorderStyle = BorderStyle.FixedSingle,
                 Location = new Point(16, 16),
-                Size = new Size(370, 320),
+                Size = new Size(388, 330),
                 MultiSelect = false
             };
-            lstContactos.Columns.Add("Nombre", 170);
-            lstContactos.Columns.Add("Dirección IP", 180);
+            lstContactos.Columns.Add("Nombre", 180);
+            lstContactos.Columns.Add("Dirección IP", 190);
             lstContactos.DoubleClick += (s, e) => EditarContacto();
 
-            var btnAdd = new Button { Text = "Añadir", Location = new Point(396, 16), Size = new Size(96, 30) };
-            var btnEdit = new Button { Text = "Editar", Location = new Point(396, 52), Size = new Size(96, 30) };
-            var btnDel = new Button { Text = "Quitar", Location = new Point(396, 88), Size = new Size(96, 30) };
+            var btnAdd = new Button { Text = "Añadir", Location = new Point(414, 16), Size = new Size(104, 30) };
+            var btnEdit = new Button { Text = "Editar", Location = new Point(414, 52), Size = new Size(104, 30) };
+            var btnDel = new Button { Text = "Quitar", Location = new Point(414, 88), Size = new Size(104, 30) };
 
             Theme.StyleButton(btnAdd, Theme.Accent, Theme.AccentHover);
             Theme.StyleSecondaryButton(btnEdit);
@@ -219,18 +219,18 @@ namespace WalkieTalkieApp
             btnEdit.Click += (s, e) => EditarContacto();
             btnDel.Click += (s, e) => QuitarContacto();
 
-            chkDescubrir = Check("Buscar equipos en la red automáticamente", 16, 344);
+            chkDescubrir = Check("Buscar equipos en la red automáticamente", 16, 356);
             chkDescubrir.Size = new Size(476, 22);
 
-            chkGuardarDescubiertos = Check("Recordar los equipos encontrados", 36, 368);
+            chkGuardarDescubiertos = Check("Recordar los equipos encontrados", 36, 382);
             chkGuardarDescubiertos.Size = new Size(456, 22);
 
             var hint = new Label
             {
                 Text = "Con la búsqueda automática no hace falta escribir ninguna IP: los equipos "
                      + "se encuentran solos y se corrigen si el router les cambia la dirección.",
-                Location = new Point(16, 392),
-                Size = new Size(476, 34),
+                Location = new Point(16, 410),
+                Size = new Size(496, 40),
                 ForeColor = Theme.TextMuted,
                 Font = Theme.FontSmall
             };
