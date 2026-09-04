@@ -204,6 +204,25 @@ namespace WalkieTalkieApp
         /// </summary>
         public bool TeclaRespondeAlUltimo { get; set; } = true;
 
+        /// <summary>
+        /// Busca versiones nuevas y las descarga sola. Al actualizar se conservan
+        /// los contactos y los ajustes de este equipo.
+        /// </summary>
+        public bool ActualizacionAutomatica { get; set; } = true;
+
+        /// <summary>Instala la actualización descargada al cerrar la aplicación.</summary>
+        public bool InstalarActualizacionAlCerrar { get; set; } = true;
+
+        /// <summary>Cada cuántas horas se vuelve a mirar si hay versión nueva.</summary>
+        public int HorasEntreComprobaciones { get; set; } = 6;
+
+        /// <summary>
+        /// De dónde se leen las versiones publicadas. Por defecto, las
+        /// publicaciones del repositorio en GitHub.
+        /// </summary>
+        public string UrlActualizaciones { get; set; } =
+            "https://api.github.com/repos/Womoxz/WalkieTalkieApp/releases";
+
         [JsonIgnore]
         public Keys TeclaPTTKey
         {

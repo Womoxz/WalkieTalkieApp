@@ -24,6 +24,9 @@ namespace WalkieTalkieApp
         public bool RequiereReinicioRed { get; private set; }
         public bool RequiereReinicioDescubrimiento { get; private set; }
 
+        /// <summary>El usuario pidió comprobar actualizaciones en ese momento.</summary>
+        public bool BuscarActualizacionSolicitado { get; private set; }
+
         private readonly bool originalDescubrir;
         private readonly int originalPuertoDesc;
         private readonly int originalSampleRate;
@@ -46,6 +49,9 @@ namespace WalkieTalkieApp
         private CheckBox chkBandeja = null!;
         private CheckBox chkSoloConocidos = null!;
         private CheckBox chkDescubrir = null!;
+        private Button btnBuscarActualizacion = null!;
+        private CheckBox chkActualizar = null!;
+        private CheckBox chkInstalarAlCerrar = null!;
         private CheckBox chkVentanaRespuesta = null!;
         private CheckBox chkTeclaUltimo = null!;
         private CheckBox chkGuardarDescubiertos = null!;
@@ -438,6 +444,49 @@ namespace WalkieTalkieApp
 
             chkVentanaRespuesta.CheckedChanged += (s, e) =>
                 chkTeclaUltimo.Enabled = chkVentanaRespuesta.Checked;
+            y += 32;
+
+            chkActualizar = Check("Buscar actualizaciones y descargarlas automáticamente", 16, y);
+            chkActualizar.Size = new Size(470, 22);
+            page.Controls.Add(chkActualizar);
+            y += 26;
+
+            chkInstalarAlCerrar = Check("Instalarlas al cerrar la aplicación", 36, y);
+            chkInstalarAlCerrar.Size = new Size(450, 22);
+            page.Controls.Add(chkInstalarAlCerrar);
+
+            chkActualizar.CheckedChanged += (s, e) =>
+            {
+                chkInstalarAlCerrar.Enabled = chkActualizar.Checked;
+                btnBuscarActualizacion.Enabled = chkActualizar.Checked;
+            };
+            y += 28;
+
+            btnBuscarActualizacion = new Button
+            {
+                Text = "Buscar ahora",
+                Location = new Point(36, y),
+                Size = new Size(130, 28)
+            };
+            Theme.StyleSecondaryButton(btnBuscarActualizacion);
+            btnBuscarActualizacion.Click += (s, e) =>
+            {
+                // Se cierra la ventana para que se vea la barra de aviso detrás.
+                BuscarActualizacionSolicitado = true;
+                DialogResult = DialogResult.OK;
+                Close();
+            };
+            page.Controls.Add(btnBuscarActualizacion);
+
+            var lblVersion = new Label
+            {
+                Text = $"Versión instalada: {UpdateService.VersionActual}",
+                Location = new Point(176, y + 6),
+                Size = new Size(300, 20),
+                ForeColor = Theme.TextMuted,
+                Font = Theme.FontSmall
+            };
+            page.Controls.Add(lblVersion);
 
             return page;
         }
@@ -534,6 +583,10 @@ namespace WalkieTalkieApp
             chkSuprimir.Checked = config.General.SuprimirTeclaGlobal;
             chkBandeja.Checked = config.General.MinimizarABandeja;
             chkSoloConocidos.Checked = config.General.SoloContactosConocidos;
+            chkActualizar.Checked = config.General.ActualizacionAutomatica;
+            chkInstalarAlCerrar.Checked = config.General.InstalarActualizacionAlCerrar;
+            chkInstalarAlCerrar.Enabled = chkActualizar.Checked;
+            btnBuscarActualizacion.Enabled = chkActualizar.Checked;
             chkVentanaRespuesta.Checked = config.General.VentanaDeRespuesta;
             chkTeclaUltimo.Checked = config.General.TeclaRespondeAlUltimo;
             chkTeclaUltimo.Enabled = chkVentanaRespuesta.Checked;
@@ -569,6 +622,8 @@ namespace WalkieTalkieApp
             config.General.SuprimirTeclaGlobal = chkSuprimir.Checked;
             config.General.MinimizarABandeja = chkBandeja.Checked;
             config.General.SoloContactosConocidos = chkSoloConocidos.Checked;
+            config.General.ActualizacionAutomatica = chkActualizar.Checked;
+            config.General.InstalarActualizacionAlCerrar = chkInstalarAlCerrar.Checked;
             config.General.VentanaDeRespuesta = chkVentanaRespuesta.Checked;
             config.General.TeclaRespondeAlUltimo = chkTeclaUltimo.Checked;
             config.General.DescubrimientoAutomatico = chkDescubrir.Checked;

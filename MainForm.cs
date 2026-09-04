@@ -47,6 +47,11 @@ namespace WalkieTalkieApp
         // Avisos de "te están hablando" con botón para responder.
         private readonly List<ReplyPopup> popups = new();
         private ReplyPopup? popupActivo;
+
+        // Actualizaciones automáticas.
+        private UpdateService? updates;
+        private System.Windows.Forms.Timer? updateTimer;
+        private bool actualizacionAvisada;
         private bool pttFromKey;
         private bool exitRequested;
         private bool trayHintShown;
@@ -84,6 +89,7 @@ namespace WalkieTalkieApp
             LoadHistory();
             StartEngine();
             InstallHotKey();
+            IniciarActualizaciones();
 
             UpdateStatus();
         }
@@ -1114,6 +1120,7 @@ namespace WalkieTalkieApp
             UpdateMuteButton();
 
             if (dlg.RequiereReinicioDescubrimiento) StartDiscovery();
+            if (dlg.BuscarActualizacionSolicitado) ComprobarActualizacionManual();
 
             if (dlg.RequiereReinicioAudio)
             {
@@ -1290,7 +1297,17 @@ namespace WalkieTalkieApp
 
             airBlinkTimer.Stop();
             airBlinkTimer.Dispose();
+            updateTimer?.Stop();
+            updateTimer?.Dispose();
             CerrarPopups();
+
+            // Si hay una versión descargada, se instala al salir: es el momento
+            // menos molesto, porque la aplicación ya se está cerrando.
+            if (config.General.InstalarActualizacionAlCerrar &&
+                updates?.InstaladorListo != null)
+            {
+                updates.Instalar();
+            }
             hotKeyManager?.Dispose();
             discovery?.Dispose();
             engine?.Dispose();
