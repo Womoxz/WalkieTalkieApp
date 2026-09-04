@@ -1,4 +1,50 @@
-# Walkie Talkie 2.2 — notas de la revisión
+# Walkie Talkie 2.3 — notas de la revisión
+
+## Actualizaciones automáticas (2.3)
+
+Hasta ahora había que llevar el instalador a cada equipo a mano. Ahora la
+aplicación **se actualiza sola**.
+
+Cómo funciona:
+
+1. Consulta las versiones publicadas en GitHub (la primera vez a los 20 segundos
+   del arranque, para no competir con el micrófono, la red y el descubrimiento;
+   después cada 6 horas, configurable).
+2. Si hay una versión más nueva, **descarga el instalador en segundo plano** y
+   muestra una barra arriba: *"Versión 2.4.0 lista para instalar · 35 MB"*.
+3. Se instala al pulsar **Actualizar ahora** o, si no se hace nada, **al cerrar
+   la aplicación** — el momento menos molesto.
+
+Detalles pensados para que no estorbe:
+
+- **Nunca interrumpe una conversación**: si estás transmitiendo, no instala nada.
+- Si la ventana está en la bandeja, el aviso sale como globo del sistema.
+- **No se pierde nada al actualizar**: el instalador conserva `appsettings.json`,
+  así que se mantienen contactos, ajustes e historial de audios.
+- **Sin conexión no molesta**: si no hay internet o GitHub no responde, falla en
+  silencio y lo apunta en el registro.
+- Se ignoran las publicaciones antiguas cuya etiqueta no es un número de versión
+  (`final`, `app`, `zip`) y las que no traen un instalador `.exe`.
+- Se puede desactivar en **⚙ Configuración → General**, donde además hay un botón
+  **Buscar ahora** y se ve la versión instalada.
+
+> Esta versión hay que instalarla a mano una vez en cada equipo. A partir de
+> ella, las siguientes llegan solas.
+
+**Publicar una versión nueva** (lo que hará que los equipos se actualicen):
+
+```
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
+"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\WalkieTalkie.iss
+```
+
+y crear una publicación en GitHub con etiqueta `vX.Y.Z` adjuntando el `.exe`
+generado. La etiqueta debe ser un número de versión; el nombre del archivo da
+igual mientras acabe en `.exe`.
+
+Comprobado de extremo a extremo: simulando un equipo con la 2.2.0 instalada, la
+aplicación detectó la 2.3.0 publicada, la descargó (34,6 MB, tamaño coincidente
+con el publicado y ejecutable válido) y la dejó lista para instalar.
 
 ## Responder a quien acaba de hablar (2.2)
 
