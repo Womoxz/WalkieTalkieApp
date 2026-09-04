@@ -97,7 +97,7 @@ Ten en cuenta que enviar a N personas multiplica por N el tráfico de subida
 
 ## Instalador
 
-`installer\dist\WalkieTalkieVW_2.2.0_Setup.exe` (34,6 MB). Hecho con Inno Setup 6,
+`installer\dist\WalkieTalkieVW_2.3.0_Setup.exe` (34,6 MB). Hecho con Inno Setup 6,
 que ya estaba instalado en el equipo. El script es `installer\WalkieTalkie.iss`.
 
 Para regenerarlo tras cambiar código:
@@ -130,7 +130,7 @@ Requiere permisos de administrador para instalar (por el firewall y la carpeta).
 Se puede desplegar en silencio con:
 
 ```
-WalkieTalkieVW_2.2.0_Setup.exe /VERYSILENT /NORESTART
+WalkieTalkieVW_2.3.0_Setup.exe /VERYSILENT /NORESTART
 ```
 
 ## Descubrimiento automático de contactos
