@@ -50,6 +50,9 @@ namespace WalkieTalkieApp
         /// <summary>Aviso al que se está contestando ahora mismo.</summary>
         private ReplyPopup? popupRespondiendo;
 
+        /// <summary>Quien habló mientras transmitías: se selecciona al terminar.</summary>
+        private string? seleccionPendiente;
+
         // Actualizaciones automáticas.
         private UpdateService? updates;
         private System.Windows.Forms.Timer? updateTimer;
@@ -511,6 +514,31 @@ namespace WalkieTalkieApp
             lstContactos.Invalidate();
         }
 
+        /// <summary>
+        /// Deja seleccionado solo ese contacto, como si se hubiera pulsado en la
+        /// lista. Si ya era el único seleccionado, no hace nada.
+        /// </summary>
+        private void SeleccionarContacto(string nombre)
+        {
+            int indice = -1;
+            for (int i = 0; i < lstContactos.Items.Count; i++)
+            {
+                if (lstContactos.Items[i] is ContactEntry c && !c.EsTodos &&
+                    c.Name.Equals(nombre, StringComparison.OrdinalIgnoreCase))
+                {
+                    indice = i;
+                    break;
+                }
+            }
+            if (indice < 0) return;
+
+            if (lstContactos.SelectedIndices.Count == 1 && lstContactos.SelectedIndex == indice) return;
+
+            lstContactos.ClearSelected();
+            lstContactos.SetSelected(indice, true);   // dispara el refresco normal
+            lstContactos.TopIndex = Math.Max(0, indice - 2);
+        }
+
         /// <summary>Contactos a los que se enviaría el audio ahora mismo.</summary>
         private List<string> Destinatarios()
         {
@@ -801,6 +829,14 @@ namespace WalkieTalkieApp
             lblAir.Text = string.Empty;
             lblAir.ForeColor = Theme.Surface;
 
+            // Si alguien habló mientras transmitías, ahora sí se le selecciona.
+            if (seleccionPendiente != null)
+            {
+                string pendiente = seleccionPendiente;
+                seleccionPendiente = null;
+                SeleccionarContacto(pendiente);
+            }
+
             // Una entrada en la conversación de cada destinatario (mismo archivo).
             foreach (var item in items) AddToHistory(item);
 
@@ -822,6 +858,22 @@ namespace WalkieTalkieApp
             }
 
             lblStatus.Text = $"Recibiendo de {contact}...";
+
+            // Como hacía la versión original: la lista salta a quien te habla,
+            // para contestarle desde la ventana principal.
+            if (config.General.SeleccionarAlQueHabla)
+            {
+                if (engine.IsTransmitting)
+                {
+                    // Nunca a media frase: eso mandaba tu mensaje a otra persona.
+                    // Se aplica en cuanto termines de hablar.
+                    seleccionPendiente = contact;
+                }
+                else
+                {
+                    SeleccionarContacto(contact);
+                }
+            }
 
             // Aviso con botón para contestar directamente a quien habla.
             MostrarPopup(contact)?.MarcarHablando();
@@ -875,7 +927,7 @@ namespace WalkieTalkieApp
 
             if (existente != null) return existente;
 
-            var popup = new ReplyPopup(contact, config.General.SegundosVentanaRespuesta);
+            var popup = new ReplyPopup(contact, config.General.SegundosCierreVentana);
 
             popup.ReplyPressed += (s, e) => ResponderDesdePopup(popup, true);
             popup.ReplyReleased += (s, e) => ResponderDesdePopup(popup, false);

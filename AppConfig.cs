@@ -195,8 +195,21 @@ namespace WalkieTalkieApp
         /// </summary>
         public bool VentanaDeRespuesta { get; set; } = true;
 
-        /// <summary>Segundos que permanece visible el aviso si no se toca.</summary>
-        public int SegundosVentanaRespuesta { get; set; } = 12;
+        /// <summary>
+        /// Segundos que espera el aviso sin respuesta antes de cerrarse solo
+        /// (0 = nunca). Cuenta desde el último mensaje de esa persona, y solo
+        /// mientras el aviso es el que tiene el turno: los que están en espera no
+        /// gastan su tiempo. Así una conversación seguida no se queda atrapada en
+        /// las ventanitas y vuelve a la ventana principal.
+        /// </summary>
+        public int SegundosCierreVentana { get; set; } = 20;
+
+        /// <summary>
+        /// Selecciona en la lista a quien te acaba de hablar, como hacía la
+        /// versión original. Si en ese momento estás hablando, el cambio espera a
+        /// que termines: cambiarlo a media frase mandaba tu mensaje a otra persona.
+        /// </summary>
+        public bool SeleccionarAlQueHabla { get; set; } = true;
 
         /// <summary>
         /// Mientras el aviso está en pantalla, la tecla de hablar contesta a quien

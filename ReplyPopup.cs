@@ -10,10 +10,9 @@ namespace WalkieTalkieApp
     /// Aviso emergente al recibir un audio, con un botón para contestar a esa
     /// persona directamente.
     ///
-    /// Sustituye al comportamiento antiguo, que cambiaba solo el contacto
-    /// seleccionado en la lista al recibir audio: era cómodo para responder, pero
-    /// si estabas grabando te cambiaba el destinatario a media frase y el mensaje
-    /// acababa en otra persona. Aquí se responde sin tocar la selección.
+    /// Convive con la selección automática del que habla en la ventana principal
+    /// (opcional). Si nadie contesta, se cierra sola al pasar el tiempo
+    /// configurado y la tecla de hablar vuelve a la ventana principal.
     /// </summary>
     public class ReplyPopup : Form
     {
@@ -29,8 +28,17 @@ namespace WalkieTalkieApp
         private readonly PictureBox picAvatar = new();
         private readonly System.Windows.Forms.Timer cierreTimer = new();
         private readonly System.Windows.Forms.Timer parpadeoTimer = new();
+        private readonly System.Windows.Forms.Timer sinRespuestaTimer = new();
+        private readonly Label lblCuenta = new();
 
         private bool parpadeoOn;
+
+        // Cierre si nadie contesta (0 = nunca). Solo corre mientras el aviso tiene
+        // el turno, la otra persona ya terminó de hablar y no se está respondiendo.
+        private readonly int segundosCierre;
+        private int restantes;
+        private bool hablando;
+        private bool respondiendo;
 
         /// <summary>Ya se contestó: el aviso se cierra en cuanto pase el segundo.</summary>
         public bool Respondido { get; private set; }
@@ -47,9 +55,11 @@ namespace WalkieTalkieApp
         public event EventHandler<AudioItem>? PlayRequested;
         public event EventHandler<ReplyPopup>? Closed2;
 
-        public ReplyPopup(string contact, int segundosVisible)
+        public ReplyPopup(string contact, int segundosSinRespuesta)
         {
             Contact = contact;
+            segundosCierre = Math.Max(0, segundosSinRespuesta);
+            restantes = segundosCierre;
 
             FormBorderStyle = FormBorderStyle.None;
             ShowInTaskbar = false;
@@ -61,14 +71,29 @@ namespace WalkieTalkieApp
 
             ConstruirUi(contact);
 
-            // El aviso NO se cierra solo: permanece hasta que se conteste o se
-            // pulse la X, aunque se haga clic en otras ventanas. Este
-            // temporizador solo lo retira un segundo después de responder.
+            // Hacer clic en otras ventanas no cierra el aviso: solo la X, la
+            // respuesta o el tiempo sin respuesta configurado. Este temporizador
+            // lo retira un segundo después de responder.
             cierreTimer.Interval = 1000;
             cierreTimer.Tick += (s, e) =>
             {
                 cierreTimer.Stop();
                 CerrarSuave();
+            };
+
+            // Sin respuesta: el aviso se retira solo y el turno pasa al siguiente
+            // (o a la ventana principal). Evita que una conversación seguida acabe
+            // ocurriendo en las ventanitas en vez de en la aplicación.
+            sinRespuestaTimer.Interval = 1000;
+            sinRespuestaTimer.Tick += (s, e) =>
+            {
+                restantes--;
+                PintarCuenta();
+                if (restantes <= 0)
+                {
+                    sinRespuestaTimer.Stop();
+                    CerrarSuave();
+                }
             };
 
             parpadeoTimer.Interval = 500;
@@ -94,8 +119,10 @@ namespace WalkieTalkieApp
             picAvatar.SizeMode = PictureBoxSizeMode.Zoom;
             picAvatar.Image = Theme.LoadAvatar(contact, 44);
 
+            // Deja sitio a la cuenta atrás: si se solapan, el nombre la tapa.
             lblNombre.Location = new Point(70, 14);
-            lblNombre.Size = new Size(Ancho - 110, 24);
+            lblNombre.Size = new Size(Ancho - 190, 24);
+            lblNombre.AutoEllipsis = true;
             lblNombre.Font = new Font("Segoe UI", 12f, FontStyle.Bold);
             lblNombre.ForeColor = Theme.Text;
             lblNombre.Text = contact;
@@ -114,6 +141,12 @@ namespace WalkieTalkieApp
             btnCerrar.ForeColor = Theme.TextMuted;
             btnCerrar.FlatAppearance.MouseOverBackColor = Theme.SurfaceAlt;
             btnCerrar.Click += (s, e) => CerrarSuave();
+
+            lblCuenta.Location = new Point(Ancho - 116, 12);
+            lblCuenta.Size = new Size(80, 18);
+            lblCuenta.Font = Theme.FontSmall;
+            lblCuenta.ForeColor = Theme.TextMuted;
+            lblCuenta.TextAlign = ContentAlignment.MiddleRight;
 
             btnResponder.Location = new Point(16, 70);
             btnResponder.Size = new Size(Ancho - 100, 60);
@@ -144,7 +177,7 @@ namespace WalkieTalkieApp
 
             Controls.AddRange(new Control[]
             {
-                barra, picAvatar, lblNombre, lblEstado, btnCerrar, btnResponder, btnPlay
+                barra, picAvatar, lblNombre, lblEstado, lblCuenta, btnCerrar, btnResponder, btnPlay
             });
         }
 
@@ -155,6 +188,9 @@ namespace WalkieTalkieApp
             btnPlay.Enabled = false;
             lblEstado.Text = "te está hablando...";
             parpadeoTimer.Start();
+
+            hablando = true;
+            ActualizarCuentaAtras();
         }
 
         public void MarcarRecibido(AudioItem? item)
@@ -175,6 +211,9 @@ namespace WalkieTalkieApp
             {
                 lblEstado.Text = "te ha hablado";
             }
+
+            hablando = false;
+            ReiniciarCuentaAtras();
         }
 
         public void MarcarRespondiendo(bool activo)
@@ -184,13 +223,16 @@ namespace WalkieTalkieApp
                 btnResponder.Text = $"SUELTA PARA ENVIAR A {Contact.ToUpperInvariant()}";
                 btnResponder.BackColor = Theme.Danger;
                 btnResponder.FlatAppearance.MouseOverBackColor = Theme.DangerHover;
-                cierreTimer.Stop();
+                respondiendo = true;
+                ActualizarCuentaAtras();
             }
             else
             {
                 btnResponder.Text = "MANTENER PARA RESPONDER";
                 btnResponder.BackColor = Theme.Accent;
                 btnResponder.FlatAppearance.MouseOverBackColor = Theme.AccentHover;
+                respondiendo = false;
+                ReiniciarCuentaAtras();
             }
         }
 
@@ -210,6 +252,7 @@ namespace WalkieTalkieApp
             lblEstado.ForeColor = Theme.Online;
             lblEstado.Text = "respondido";
 
+            ActualizarCuentaAtras();
             cierreTimer.Start();   // se cierra en 1 segundo
         }
 
@@ -219,6 +262,9 @@ namespace WalkieTalkieApp
         /// </summary>
         public void MarcarActivo(bool activo, string tecla)
         {
+            // Se llama también cuando llegan otros avisos; solo reinicia el tiempo
+            // si de verdad acaba de recibir el turno.
+            bool recibeElTurno = activo && !EsElActivo;
             EsElActivo = activo;
 
             if (Respondido) return;
@@ -238,13 +284,44 @@ namespace WalkieTalkieApp
                 btnResponder.BackColor = Theme.SurfaceAlt;
                 btnResponder.Text = "EN ESPERA";
             }
+
+            // Al recibir el turno empieza con el tiempo completo.
+            if (recibeElTurno) ReiniciarCuentaAtras(); else ActualizarCuentaAtras();
             Invalidate();
+        }
+
+        private void ReiniciarCuentaAtras()
+        {
+            restantes = segundosCierre;
+            ActualizarCuentaAtras();
+        }
+
+        /// <summary>
+        /// Arranca o para la cuenta según el estado. Solo corre si hay un tiempo
+        /// configurado, el aviso tiene el turno, la otra persona ya terminó de
+        /// hablar y nadie está respondiendo.
+        /// </summary>
+        private void ActualizarCuentaAtras()
+        {
+            bool correr = segundosCierre > 0 && EsElActivo && !hablando &&
+                          !respondiendo && !Respondido && !IsDisposed;
+
+            if (correr) sinRespuestaTimer.Start();
+            else sinRespuestaTimer.Stop();
+
+            PintarCuenta();
+        }
+
+        private void PintarCuenta()
+        {
+            lblCuenta.Text = sinRespuestaTimer.Enabled && restantes > 0 ? $"cierra en {restantes} s" : "";
         }
 
         private void CerrarSuave()
         {
             cierreTimer.Stop();
             parpadeoTimer.Stop();
+            sinRespuestaTimer.Stop();
             Closed2?.Invoke(this, this);
             Close();
         }
@@ -287,6 +364,7 @@ namespace WalkieTalkieApp
             {
                 cierreTimer.Dispose();
                 parpadeoTimer.Dispose();
+                sinRespuestaTimer.Dispose();
                 picAvatar.Image?.Dispose();
             }
             base.Dispose(disposing);

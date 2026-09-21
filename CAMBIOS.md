@@ -1,4 +1,42 @@
-# Walkie Talkie 2.4 — notas de la revisión
+# Walkie Talkie 2.5 — notas de la revisión
+
+## Novedades de la 2.5: vuelve la selección automática y los avisos se cierran solos
+
+En la 2.4 la ventanita de respuesta no se cerraba hasta contestarla. Si alguien
+hablaba seguido, la conversación acababa ocurriendo en las ventanitas y no en la
+aplicación. Ahora hay una pestaña nueva, **Configuración → Avisos**, con todo lo
+que pasa cuando alguien te habla:
+
+- **Seleccionarlo automáticamente en la lista de contactos** (activado por
+  defecto). Es el comportamiento de la versión original: la ventana principal
+  queda lista para contestar a quien acaba de hablar. **Si en ese momento estás
+  hablando, el cambio espera a que termines**, para que tu mensaje no acabe en
+  otra persona a media frase.
+- **Mostrar una ventanita para responderle**: igual que en la 2.4 (turno por
+  orden de llegada, la X, cierre un segundo después de responder).
+- **Si no se responde, cerrar la ventanita a los:** *Nunca · 15 s · 20 s ·
+  50 s · 1 minuto · Personalizado* (de 5 a 3600 segundos). Por defecto, **20
+  segundos**.
+
+Cómo se cuenta el tiempo:
+
+- Empieza cuando la otra persona **termina** de hablar, y vuelve a empezar si
+  manda otro mensaje.
+- Solo corre en la ventanita que **tiene el turno**. Las que están *EN ESPERA*
+  no gastan su tiempo: cuando les llega el turno empiezan con el tiempo completo.
+- Se detiene mientras mantienes pulsado para responder.
+- La ventanita muestra *"cierra en N s"* junto a la X.
+
+Al cerrarse sola, el turno pasa a la siguiente ventanita o, si no queda ninguna,
+**la tecla vuelve a la ventana principal**, que ya tiene seleccionado a quien
+habló.
+
+Otros detalles:
+
+- Los nombres largos se recortan con puntos suspensivos en la ventanita, para
+  que no tapen la cuenta atrás.
+- Al actualizar desde la 2.4 no hace falta tocar nada: si el archivo de ajustes
+  no tiene las opciones nuevas, se usan los valores por defecto.
 
 ## Correcciones de la 2.4
 
@@ -44,7 +82,7 @@ Cómo funciona:
    del arranque, para no competir con el micrófono, la red y el descubrimiento;
    después cada 6 horas, configurable).
 2. Si hay una versión más nueva, **descarga el instalador en segundo plano** y
-   muestra una barra arriba: *"Versión 2.4.0 lista para instalar · 35 MB"*.
+   muestra una barra arriba: *"Versión 2.5.0 lista para instalar · 35 MB"*.
 3. Se instala al pulsar **Actualizar ahora** o, si no se hace nada, **al cerrar
    la aplicación** — el momento menos molesto.
 
@@ -130,7 +168,7 @@ Ten en cuenta que enviar a N personas multiplica por N el tráfico de subida
 
 ## Instalador
 
-`installer\dist\WalkieTalkieVW_2.4.0_Setup.exe` (34,6 MB). Hecho con Inno Setup 6,
+`installer\dist\WalkieTalkieVW_2.5.0_Setup.exe` (34,6 MB). Hecho con Inno Setup 6,
 que ya estaba instalado en el equipo. El script es `installer\WalkieTalkie.iss`.
 
 Para regenerarlo tras cambiar código:
@@ -163,7 +201,7 @@ Requiere permisos de administrador para instalar (por el firewall y la carpeta).
 Se puede desplegar en silencio con:
 
 ```
-WalkieTalkieVW_2.4.0_Setup.exe /VERYSILENT /NORESTART
+WalkieTalkieVW_2.5.0_Setup.exe /VERYSILENT /NORESTART
 ```
 
 ## Descubrimiento automático de contactos

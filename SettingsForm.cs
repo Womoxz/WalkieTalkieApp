@@ -53,6 +53,11 @@ namespace WalkieTalkieApp
         private CheckBox chkActualizar = null!;
         private CheckBox chkInstalarAlCerrar = null!;
         private CheckBox chkVentanaRespuesta = null!;
+        private CheckBox chkSeleccionarAlQueHabla = null!;
+        private ComboBox cmbCierre = null!;
+        private NumericUpDown numCierre = null!;
+        private Label lblCierreSeg = null!;
+        private Action? refrescarAvisos;
         private CheckBox chkTeclaUltimo = null!;
         private CheckBox chkGuardarDescubiertos = null!;
         private NumericUpDown numPuertoDesc = null!;
@@ -94,7 +99,7 @@ namespace WalkieTalkieApp
             {
                 Dock = DockStyle.Fill,
                 DrawMode = TabDrawMode.OwnerDrawFixed,
-                ItemSize = new Size(120, 30),
+                ItemSize = new Size(126, 30),
                 SizeMode = TabSizeMode.Fixed,
                 Padding = new Point(0, 0)
             };
@@ -102,6 +107,7 @@ namespace WalkieTalkieApp
 
             tabs.TabPages.Add(BuildContactsTab());
             tabs.TabPages.Add(BuildAudioTab());
+            tabs.TabPages.Add(BuildAvisosTab());
             tabs.TabPages.Add(BuildGeneralTab());
 
             var footer = new Panel
@@ -378,6 +384,118 @@ namespace WalkieTalkieApp
         // Pestaña General
         // ------------------------------------------------------------------
 
+        // ------------------------------------------------------------------
+        // Pestaña Avisos: qué pasa cuando alguien te habla
+        // ------------------------------------------------------------------
+
+        /// <summary>Opciones de cierre del aviso sin respuesta (segundos; 0 = nunca).</summary>
+        private static readonly (string Texto, int Segundos)[] OpcionesCierre =
+        {
+            ("Nunca (hasta que respondas o lo cierres)", 0),
+            ("15 segundos", 15),
+            ("20 segundos", 20),
+            ("50 segundos", 50),
+            ("1 minuto", 60),
+            ("Personalizado...", -1)
+        };
+
+        private TabPage BuildAvisosTab()
+        {
+            var page = NewPage("Avisos");
+            int y = 16;
+
+            page.Controls.Add(new Label
+            {
+                Text = "CUANDO ALGUIEN TE HABLA",
+                Location = new Point(16, y),
+                Size = new Size(480, 18),
+                ForeColor = Theme.Accent,
+                Font = new Font("Segoe UI", 8f, FontStyle.Bold)
+            });
+            y += 28;
+
+            chkSeleccionarAlQueHabla = Check("Seleccionarlo automáticamente en la lista de contactos", 16, y);
+            chkSeleccionarAlQueHabla.Size = new Size(490, 22);
+            page.Controls.Add(chkSeleccionarAlQueHabla);
+            y += 24;
+
+            page.Controls.Add(new Label
+            {
+                Text = "Como en la versión original: la ventana principal queda lista para contestarle. " +
+                       "Si en ese momento estás hablando, el cambio espera a que termines.",
+                Location = new Point(36, y),
+                Size = new Size(470, 34),
+                ForeColor = Theme.TextMuted,
+                Font = Theme.FontSmall
+            });
+            y += 46;
+
+            chkVentanaRespuesta = Check("Mostrar una ventanita para responderle", 16, y);
+            chkVentanaRespuesta.Size = new Size(490, 22);
+            page.Controls.Add(chkVentanaRespuesta);
+            y += 26;
+
+            chkTeclaUltimo = Check("Mientras esté abierta, la tecla de hablar le responde a esa persona", 36, y);
+            chkTeclaUltimo.Size = new Size(470, 22);
+            page.Controls.Add(chkTeclaUltimo);
+            y += 32;
+
+            var lblCierre = Etiqueta("Si no se responde, cerrar la ventanita a los:", 36, y);
+            lblCierre.Size = new Size(460, 18);
+            page.Controls.Add(lblCierre);
+            y += 20;
+
+            cmbCierre = Combo(36, y, 290);
+            foreach (var op in OpcionesCierre) cmbCierre.Items.Add(op.Texto);
+            page.Controls.Add(cmbCierre);
+
+            numCierre = Numero(336, y, 5, 3600);
+            numCierre.Size = new Size(80, 24);
+            page.Controls.Add(numCierre);
+
+            lblCierreSeg = new Label
+            {
+                Text = "segundos",
+                Location = new Point(422, y + 3),
+                Size = new Size(80, 20),
+                ForeColor = Theme.TextMuted,
+                Font = Theme.FontSmall
+            };
+            page.Controls.Add(lblCierreSeg);
+            y += 34;
+
+            page.Controls.Add(new Label
+            {
+                Text = "El tiempo cuenta desde el último mensaje de esa persona y solo para la ventanita " +
+                       "que tiene el turno: las que están en espera no gastan su tiempo. Al cerrarse, " +
+                       "la tecla vuelve a la ventana principal, así una conversación seguida no se " +
+                       "queda atrapada en las ventanitas.",
+                Location = new Point(36, y),
+                Size = new Size(470, 64),
+                ForeColor = Theme.TextMuted,
+                Font = Theme.FontSmall
+            });
+
+            // Dependencias entre controles.
+            void Refrescar()
+            {
+                bool ventana = chkVentanaRespuesta.Checked;
+                chkTeclaUltimo.Enabled = ventana;
+                cmbCierre.Enabled = ventana;
+
+                bool personalizado = cmbCierre.SelectedIndex == OpcionesCierre.Length - 1;
+                numCierre.Visible = personalizado;
+                lblCierreSeg.Visible = personalizado;
+                numCierre.Enabled = ventana;
+            }
+
+            chkVentanaRespuesta.CheckedChanged += (s, e) => Refrescar();
+            cmbCierre.SelectedIndexChanged += (s, e) => Refrescar();
+            refrescarAvisos = Refrescar;
+
+            return page;
+        }
+
         private TabPage BuildGeneralTab()
         {
             var page = NewPage("General");
@@ -431,19 +549,6 @@ namespace WalkieTalkieApp
             chkSoloConocidos = Check("Aceptar audio solo de los contactos de la lista", 16, y);
             chkSoloConocidos.Size = new Size(470, 22);
             page.Controls.Add(chkSoloConocidos);
-            y += 30;
-
-            chkVentanaRespuesta = Check("Avisar con una ventana para responder cuando alguien te hable", 16, y);
-            chkVentanaRespuesta.Size = new Size(470, 22);
-            page.Controls.Add(chkVentanaRespuesta);
-            y += 26;
-
-            chkTeclaUltimo = Check("Con esa ventana abierta, la tecla responde a quien acaba de hablar", 36, y);
-            chkTeclaUltimo.Size = new Size(450, 22);
-            page.Controls.Add(chkTeclaUltimo);
-
-            chkVentanaRespuesta.CheckedChanged += (s, e) =>
-                chkTeclaUltimo.Enabled = chkVentanaRespuesta.Checked;
             y += 32;
 
             chkActualizar = Check("Buscar actualizaciones y descargarlas automáticamente", 16, y);
@@ -588,6 +693,18 @@ namespace WalkieTalkieApp
             chkInstalarAlCerrar.Enabled = chkActualizar.Checked;
             btnBuscarActualizacion.Enabled = chkActualizar.Checked;
             chkVentanaRespuesta.Checked = config.General.VentanaDeRespuesta;
+            chkSeleccionarAlQueHabla.Checked = config.General.SeleccionarAlQueHabla;
+
+            int segundos = Math.Max(0, config.General.SegundosCierreVentana);
+            int indice = Array.FindIndex(OpcionesCierre, o => o.Segundos == segundos);
+            if (indice < 0)
+            {
+                // Un valor que no está en la lista: se muestra como personalizado.
+                indice = OpcionesCierre.Length - 1;
+            }
+            cmbCierre.SelectedIndex = indice;
+            numCierre.Value = Math.Clamp(segundos > 0 ? segundos : 30, 5, 3600);
+            refrescarAvisos?.Invoke();
             chkTeclaUltimo.Checked = config.General.TeclaRespondeAlUltimo;
             chkTeclaUltimo.Enabled = chkVentanaRespuesta.Checked;
             chkDescubrir.Checked = config.General.DescubrimientoAutomatico;
@@ -625,6 +742,10 @@ namespace WalkieTalkieApp
             config.General.ActualizacionAutomatica = chkActualizar.Checked;
             config.General.InstalarActualizacionAlCerrar = chkInstalarAlCerrar.Checked;
             config.General.VentanaDeRespuesta = chkVentanaRespuesta.Checked;
+            config.General.SeleccionarAlQueHabla = chkSeleccionarAlQueHabla.Checked;
+
+            var opcion = OpcionesCierre[Math.Max(0, cmbCierre.SelectedIndex)];
+            config.General.SegundosCierreVentana = opcion.Segundos < 0 ? (int)numCierre.Value : opcion.Segundos;
             config.General.TeclaRespondeAlUltimo = chkTeclaUltimo.Checked;
             config.General.DescubrimientoAutomatico = chkDescubrir.Checked;
             config.General.GuardarContactosDescubiertos = chkGuardarDescubiertos.Checked;
